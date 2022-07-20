@@ -35,6 +35,18 @@ class DirectorController extends StateNotifier<DirectorModel> {
       addUserToLobby(uid: uid);
     }, userOffline: (uid, reason) {
       removeUser(uid: uid);
+    }, remoteAudioStateChanged: (uid, state, reason, elapsed) {
+      if (state == AudioRemoteState.Decoding) {
+        updateUserAudio(uid: uid, muted: false);
+      } else if (state == AudioRemoteState.Stopped) {
+        updateUserAudio(uid: uid, muted: true);
+      }
+    }, remoteVideoStateChanged: (uid, state, reason, elapsed) {
+      if (state == VideoRemoteState.Decoding) {
+        updateUserVideo(uid: uid, videoDisabled: false);
+      } else if (state == VideoRemoteState.Stopped) {
+        updateUserVideo(uid: uid, videoDisabled: true);
+      }
     }));
 
     // Callbacks to RTM Client
@@ -137,7 +149,12 @@ class DirectorController extends StateNotifier<DirectorModel> {
 
     state = state.copyWith(lobbyUsers: {
       ...state.lobbyUsers,
-      AgoraUser(uid: uid, backgroundColor: tempColor, name: tempName, muted: true, disableVideo: true)
+      AgoraUser(
+          uid: uid,
+          backgroundColor: tempColor,
+          name: tempName,
+          muted: true,
+          disableVideo: true)
     }, activeUsers: _tempActive);
   }
 
@@ -157,5 +174,33 @@ class DirectorController extends StateNotifier<DirectorModel> {
       }
     }
     state = state.copyWith(activeUsers: _tempActive, lobbyUsers: _tempLobby);
+  }
+
+  Future<void> updateUserAudio({required int uid, required bool muted}) async {
+    AgoraUser _tempUser =
+        state.activeUsers.singleWhere((element) => element.uid == uid);
+    Set<AgoraUser> _tempSet = state.activeUsers;
+    _tempSet.remove(_tempUser);
+    _tempSet.add(_tempUser.copyWith(muted: muted));
+    state = state.copyWith(activeUsers: _tempSet);
+  }
+
+  Future<void> updateUserVideo(
+      {required int uid, required bool videoDisabled}) async {
+    AgoraUser _tempUser =
+        state.activeUsers.singleWhere((element) => element.uid == uid);
+    Set<AgoraUser> _tempSet = state.activeUsers;
+    _tempSet.remove(_tempUser);
+    _tempSet.add(_tempUser.copyWith(disableVideo: videoDisabled));
+    state = state.copyWith(activeUsers: _tempSet);
+  }
+
+  Future<void> toggleUserAudio(
+      {required int index, required bool muted}) async {
+    if (muted) {
+      // send message to mute
+    } else {
+      // send message to un-mute
+    }
   }
 }
